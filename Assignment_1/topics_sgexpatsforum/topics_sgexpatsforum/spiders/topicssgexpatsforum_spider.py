@@ -7,7 +7,6 @@ class QuotesSpider(scrapy.Spider):
         'https://forum.singaporeexpats.com/viewforum.php?f=93'
     ]
 
-
     # Scrape the list of topics' title, the respective number of replies and the respective number of views in multiple pages
     def parse(self, response):
         for topic_title in response.xpath('//div[@class="forumbg"]'):
