@@ -1,7 +1,7 @@
 from pyspark.sql import SparkSession
 from pyspark.sql.types import *
 from pyspark.sql.functions import explode
-from pyspark.sql.functions import split, concat_ws, col, lower, regexp_replace, window, current_timestamp, desc
+from pyspark.sql.functions import split, concat_ws, col, lower, regexp_replace, window, current_timestamp, desc, from_json
 from pyspark.ml.feature import StopWordsRemover
 
 def parse_data_from_kafka_message(sdf, schema):
@@ -42,12 +42,15 @@ if __name__ == "__main__":
     # Use the function to parse the fields
     lines = parse_data_from_kafka_message(lines, hardwarezoneSchema) \
         .select("topic","author","content","timestamp")
+    # lines = lines.withColumn('data', from_json(col("value"), schema=hardwarezoneSchema)).select('timestamp', 'data.*')
 
     # Top 10 users with most posts in 2 minutes
     top_10_users = lines.select("timestamp", "author") \
         .groupBy(window("timestamp", "2 minutes", "1 minute"), "author").count() \
         .withColumn("end", col("window")["end"]) \
-        .withColumn("current_timestamp", current_timestamp()) \
+        .withColumn("current_timestamp", current_timestamp())
+
+    top_10_users = top_10_users \
         .filter(top_10_users.end < top_10_users.current_timestamp) \
         .orderBy(desc('window'), desc("count")).limit(10)
 
@@ -62,7 +65,9 @@ if __name__ == "__main__":
         .select("timestamp", explode(split("words", " ")).alias("final_words")) \
         .groupBy(window("timestamp", "2 minutes", "1 minute"), "final_words").count() \
         .withColumn("end", col('window')['end']) \
-        .withColumn("current_timestamp", current_timestamp()) \
+        .withColumn("current_timestamp", current_timestamp())
+
+    top_10_words = top_10_words \
         .filter(top_10_words.end < top_10_words.current_timestamp) \
         .orderBy(desc('window'), desc("count")).limit(10)
 

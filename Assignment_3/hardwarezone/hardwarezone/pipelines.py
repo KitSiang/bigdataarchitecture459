@@ -8,17 +8,12 @@
 from itemadapter import ItemAdapter
 import pymongo
 import json
+from scrapy.exceptions import DropItem
 from kafka import KafkaProducer
 
 
 class HardwarezonePipeline:
     def __init__(self):
-        connection = pymongo.MongoClient(
-            "localhost",
-            27017
-        )
-        db = connection["hardwarezone"]
-        self.collection = db["posts"]
         self.producer = KafkaProducer(bootstrap_servers=['localhost:9092'], \
             value_serializer=lambda v:json.dumps(v).encode('utf-8'))
 
@@ -29,7 +24,6 @@ class HardwarezonePipeline:
                 valid = False
                 raise DropItem("Missing {0}!".format(data))
         if valid:
-            #self.collection.insert(dict(item))
             self.producer.send('scrapy-output', dict(item))
         return item
         
